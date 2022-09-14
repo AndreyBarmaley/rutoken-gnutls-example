@@ -1,4 +1,8 @@
 # rutoken-gnutls-example
 
+```
 mkdir build
-cd build && cmake3 .. && make
+cd build
+cmake3 ..
+make
+```
