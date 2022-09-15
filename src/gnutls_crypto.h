@@ -34,6 +34,43 @@
 
 namespace TLS
 {
+    /// @private
+    struct x509_crt
+    {
+        gnutls_x509_crt_t crt;
+
+        x509_crt(gnutls_x509_crt_t ptr = nullptr) : crt(ptr) {}
+        ~x509_crt(){ if(crt) gnutls_x509_crt_deinit(crt); }
+    };
+
+    /// @private
+    struct public_key
+    {
+        gnutls_pubkey_t key;
+
+        public_key(gnutls_pubkey_t ptr = nullptr) : key(ptr) {}
+        ~public_key(){ if(key) gnutls_pubkey_deinit(key); }
+    };
+
+    /// @private
+    struct private_key
+    {
+        gnutls_privkey_t key;
+
+        private_key(gnutls_privkey_t ptr = nullptr) : key(ptr) {}
+        ~private_key(){ if(key) gnutls_privkey_deinit(key); }
+    };
+
+    /// @private
+    struct pkcs7
+    {
+        gnutls_pkcs7_t ptr;
+
+        pkcs7(gnutls_pkcs7_t val = nullptr) : ptr(val) {}
+        ~pkcs7(){ if(ptr) gnutls_pkcs7_deinit(ptr); }
+    };
+
+    /// tools
     std::string errorStr(std::string_view func, int err);
     std::vector<uint8_t> randomKey(size_t keysz);
 
@@ -83,24 +120,17 @@ namespace TLS
     public:
         DatumConst();
         DatumConst(std::string_view str);
+        DatumConst(const uint8_t* ptr, size_t);
         DatumConst(const std::vector<uint8_t> &);
 
         const gnutls_datum_t* get(void) const override { return & st; }
         gnutls_datum_t* get(void) override { return & st; }
     };
 
-    struct X509CrtInt
-    {
-        gnutls_x509_crt_t crt;
-
-        X509CrtInt(gnutls_x509_crt_t ptr = nullptr) : crt(ptr) {}
-        ~X509CrtInt(){ if(crt) gnutls_x509_crt_deinit(crt); }
-    };
-
     /// X509 certificate
     class X509Crt
     {
-        std::shared_ptr<X509CrtInt> ptr;
+        std::shared_ptr<x509_crt> ptr;
 
     public:
         X509Crt();
@@ -123,18 +153,11 @@ namespace TLS
         std::pair<gnutls_pk_algorithm_t, int> getAlgoritmBits(void) const;
     };
 
-    struct PublicKeyInt
-    {
-        gnutls_pubkey_t key;
-
-        PublicKeyInt(gnutls_pubkey_t ptr = nullptr) : key(ptr) {}
-        ~PublicKeyInt(){ if(key) gnutls_pubkey_deinit(key); }
-    };
 
     /// Public key
     class PublicKey
     {
-        std::shared_ptr<PublicKeyInt> ptr;
+        std::shared_ptr<public_key> ptr;
 
     public:
         PublicKey();
@@ -142,7 +165,7 @@ namespace TLS
 
         gnutls_pubkey_t get(void) { return ptr->key; }
 
-        static PublicKey importX509(const Datum & dt, bool der);
+        static PublicKey importX509(gnutls_x509_crt_t crt);
 
         DatumShared export2(bool der);
         DatumShared encrypt(const Datum &);
@@ -150,18 +173,10 @@ namespace TLS
         std::pair<gnutls_pk_algorithm_t, int> getAlgoritmBits(void) const;
     };
 
-    struct PrivateKeyInt
-    {
-        gnutls_privkey_t key;
-
-        PrivateKeyInt(gnutls_privkey_t ptr = nullptr) : key(ptr) {}
-        ~PrivateKeyInt(){ if(key) gnutls_privkey_deinit(key); }
-    };
-
     /// PrivKey
     class PrivateKey
     {
-        std::shared_ptr<PrivateKeyInt> ptr;
+        std::shared_ptr<private_key> ptr;
 
     public:
         PrivateKey();
@@ -175,6 +190,20 @@ namespace TLS
         DatumShared decrypt(const Datum &);
     };
 
+    /// PKCS7
+    class PKCS7
+    {
+        std::shared_ptr<pkcs7> ptr;
+
+    public:
+        PKCS7();
+        virtual ~PKCS7() {}
+
+        bool setCrt(gnutls_x509_crt_t crt);
+
+        static PKCS7 import(const Datum &, bool der);
+        DatumShared export2(bool der);
+    };
 }
 
 #endif

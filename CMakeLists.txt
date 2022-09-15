@@ -9,9 +9,10 @@ project(RutokenTest VERSION 20220910.1)
 add_executable(RutokenTest src/RutokenTest.cpp src/gnutls_crypto.cpp)
 
 find_package(GnuTLS REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_library(PKICORE_LIBRARY NAMES pki-core PATHS rutoken/lib REQUIRED)
 
-target_compile_options(RutokenTest PRIVATE ${GNUTLS_DEFINITIONS})
-target_include_directories(RutokenTest PRIVATE include ${GNUTLS_INCLUDE_DIR} src rutoken/include)
-target_link_libraries(RutokenTest ${GNUTLS_LIBRARIES} ${PKICORE_LIBRARY} stdc++fs)
+target_compile_options(RutokenTest PRIVATE ${GNUTLS_DEFINITIONS} ${OPENSSL_DEFINITIONS})
+target_include_directories(RutokenTest PRIVATE include ${GNUTLS_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} src rutoken/include)
+target_link_libraries(RutokenTest ${GNUTLS_LIBRARIES} ${OPENSSL_LIBRARIES} ${PKICORE_LIBRARY} stdc++fs)
 set_target_properties(RutokenTest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

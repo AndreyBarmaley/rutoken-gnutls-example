@@ -162,6 +162,12 @@ namespace TLS
         st.size = str.size();
     }
 
+    DatumConst::DatumConst(const uint8_t* ptr, size_t len)
+    {
+        st.data = (unsigned char*) ptr;
+        st.size = len;
+    }
+
     DatumConst::DatumConst(const std::vector<uint8_t> & vec)
     {
         st.data = (unsigned char*) vec.data();
@@ -175,7 +181,7 @@ namespace TLS
         auto ret = gnutls_x509_crt_init(& crt);
         if(GNUTLS_E_SUCCESS != ret)
             throw std::runtime_error(errorStr("gnutls_x509_crt_init", ret));
-        ptr = std::make_shared<X509CrtInt>(crt);
+        ptr = std::make_shared<x509_crt>(crt);
     }
 
     X509Crt X509Crt::import(const Datum & dt, bool der)
@@ -306,17 +312,16 @@ namespace TLS
         auto ret = gnutls_pubkey_init(& key);
         if(GNUTLS_E_SUCCESS != ret)
             throw std::runtime_error(errorStr("gnutls_pubkey_init", ret));
-        ptr = std::make_shared<PublicKeyInt>(key);
+        ptr = std::make_shared<public_key>(key);
     }
 
-    PublicKey PublicKey::importX509(const Datum & dt, bool der)
+    PublicKey PublicKey::importX509(gnutls_x509_crt_t crt)
     {
         PublicKey res;
 
-        auto ret = gnutls_pubkey_import_x509_raw(res.get(), dt.get(), der ? GNUTLS_X509_FMT_DER : GNUTLS_X509_FMT_PEM, 0);
-
+        auto ret = gnutls_pubkey_import_x509(res.get(), crt, 0);
         if(GNUTLS_E_SUCCESS != ret)
-            throw std::runtime_error(errorStr("gnutls_pubkey_import_x509_raw", ret));
+            throw std::runtime_error(errorStr("gnutls_pubkey_import_x509", ret));
 
         return res;
     }
@@ -357,7 +362,7 @@ namespace TLS
         auto ret = gnutls_privkey_init(& key);
         if(GNUTLS_E_SUCCESS != ret)
             throw std::runtime_error(errorStr("gnutls_privkey_init", ret));
-        ptr = std::make_shared<PrivateKeyInt>(key);
+        ptr = std::make_shared<private_key>(key);
     }
 
     PrivateKey PrivateKey::importX509(const Datum & dt, bool der)
@@ -391,5 +396,47 @@ namespace TLS
             return false;
         }
         return true;
+    }
+
+    PKCS7::PKCS7()
+    {
+        gnutls_pkcs7_t val = nullptr;
+        auto ret = gnutls_pkcs7_init(& val);
+        if(GNUTLS_E_SUCCESS != ret)
+            throw std::runtime_error(errorStr("gnutls_pkcs7_init", ret));
+        ptr = std::make_shared<pkcs7>(val);
+    }
+
+    bool PKCS7::setCrt(gnutls_x509_crt_t crt)
+    {
+        auto ret = gnutls_pkcs7_set_crt(ptr->ptr, crt);
+        if(GNUTLS_E_SUCCESS != ret)
+        {
+            std::cerr << errorStr("gnutls_pkcs7_set_crt", ret) << std::endl;
+            return false;
+        }
+        return true;
+    }
+
+    DatumShared PKCS7::export2(bool der)
+    {
+        DatumShared dt;
+        auto ret = gnutls_pkcs7_export2(ptr->ptr, der ? GNUTLS_X509_FMT_DER : GNUTLS_X509_FMT_PEM, dt.get());
+
+        if(GNUTLS_E_SUCCESS != ret)
+            throw std::runtime_error(errorStr("gnutls_pkcs7_export2", ret));
+
+        return dt;
+    }
+
+    PKCS7 PKCS7::import(const Datum & dt, bool der)
+    {
+        PKCS7 res;
+        int ret = gnutls_pkcs7_import(res.ptr->ptr, dt.get(), der ? GNUTLS_X509_FMT_DER : GNUTLS_X509_FMT_PEM);
+
+        if(GNUTLS_E_SUCCESS != ret)
+            throw std::runtime_error("gnutls_pkcs7_import");
+
+        return res;
     }
 }
